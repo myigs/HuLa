@@ -70,50 +70,42 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
-      - name: Completely disable updater and signing
+      - name: Generate Tauri signing key
+        id: tauri-signing-key
         run: |
-          # 修改tauri.conf.json文件
-          $tauriConfigPath = "src-tauri/tauri.conf.json"
-          if (Test-Path $tauriConfigPath) {
-            echo "开始修改tauri.conf.json以禁用updater..."
-            $configJson = Get-Content -Raw $tauriConfigPath
-            $config = $configJson | ConvertFrom-Json
-            
-            # 完全移除plugins.updater部分
-            if ($config.plugins.PSObject.Properties.Name -contains "updater") {
-              $config.plugins.PSObject.Properties.Remove("updater")
-              echo "已完全移除updater配置"
-            } else {
-              echo "未找到updater配置"
-            }
-            
-            # 将修改后的配置写回文件
-            $config | ConvertTo-Json -Depth 20 | Set-Content $tauriConfigPath
-            echo "已更新tauri.conf.json文件"
-            
-            # 显示修改后的配置
-            Get-Content $tauriConfigPath
-          } else {
-            echo "错误：未找到tauri.conf.json文件"
-            exit 1
-          }
+          # 为Tauri签名密钥生成一个随机密码
+          $TAURI_KEY_PASSWORD = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 16 | ForEach-Object {[char]$_})
+          
+          # 将密码写入GitHub输出变量
+          echo "TAURI_KEY_PASSWORD=$TAURI_KEY_PASSWORD" >> $env:GITHUB_OUTPUT
+          
+          # 生成Tauri签名密钥
+          $env:TAURI_KEY_PASSWORD = $TAURI_KEY_PASSWORD
+          pnpm tauri signer generate -w "$TAURI_KEY_PASSWORD"
+          
+          # 导出私钥到环境变量
+          $TAURI_PRIVATE_KEY = Get-Content -Path "~/.tauri/myapp.key" -Raw
+          echo "TAURI_PRIVATE_KEY<<EOF" >> $env:GITHUB_OUTPUT
+          echo "$TAURI_PRIVATE_KEY" >> $env:GITHUB_OUTPUT
+          echo "EOF" >> $env:GITHUB_OUTPUT
+          
+          # 显示消息表示密钥已生成
+          echo "Tauri签名密钥已成功生成并添加到配置文件中"
         shell: pwsh
       
       - name: Build Tauri app
-        run: |
-          # 设置环境变量忽略签名错误
-          $env:TAURI_SIGNING_PRIVATE_KEY_IGNORE = "true"
-          pnpm tauri build
-        shell: pwsh
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 这里不再需要签名相关的环境变量
-      
-      - name: List build artifacts
-        run: |
-          echo "列出构建产物："
-          Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Include *.msi,*.exe
-        shell: pwsh
+          TAURI_PRIVATE_KEY: ${{ steps.tauri-signing-key.outputs.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ steps.tauri-signing-key.outputs.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ steps.tauri-signing-key.outputs.TAURI_KEY_PASSWORD }}
+        with:
+          tagName: v__VERSION__
+          releaseName: "HuLa v__VERSION__"
+          releaseBody: "请查看版本详情了解新功能。"
+          releaseDraft: true
+          prerelease: false
       
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
