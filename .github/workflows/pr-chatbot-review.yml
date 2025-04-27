@@ -1,145 +1,85 @@
-name: PR Review Bot
+name: 生成Tauri签名密钥
 
 on:
-  pull_request:
-    types: [opened, synchronize]
-
-permissions:
-  contents: read
-  pull-requests: write
+  workflow_dispatch:  # 仅允许手动触发
 
 jobs:
-  review:
-    # 跳过 Renovate PR
-    if: |
-      github.actor != 'renovate[bot]' &&
-      github.actor != 'renovate-preview[bot]'
-    runs-on: ubuntu-latest
+  generate-keys:
+    runs-on: ubuntu-latest  # 使用Ubuntu环境，更可靠
+    
     steps:
-      - name: Checkout code
+      - name: 检出仓库
         uses: actions/checkout@v4
+      
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
-
-      - name: Get PR diff
-        id: diff
-        run: |
-          git fetch origin ${{ github.event.pull_request.base.sha }}
-          # 排除配置文件，只分析源代码文件
-          DIFF=$(git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} -- \
-            'src/**/*.vue' \
-            'src/**/*.ts' \
-            'src/**/*.tsx' \
-            'src-tauri/**/*.rs' \
-            ':!:**/*.json' \
-            ':!:**/*.yaml' \
-            ':!:**/*.yml' \
-            ':!:**/*.config.*' \
-            ':!:**/*.lock' \
-            ':!:**/*.toml' \
-            ':!:.env*' \
-            ':!:.eslintrc*' \
-            ':!:.prettierrc*')
-
-          # 如果没有相关文件变更，设置一个提示信息
-          if [ -z "$DIFF" ]; then
-            echo "NO_CHANGES=true" >> $GITHUB_ENV
-            echo "DIFF=没有检测到相关文件的变更。" >> $GITHUB_ENV
-          else
-            echo "NO_CHANGES=false" >> $GITHUB_ENV
-            echo "DIFF<<EOF" >> $GITHUB_ENV
-            echo "$DIFF" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-          fi
-
-      # 首先安装 pnpm
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+          node-version: 20
+      
+      - name: 设置pnpm
+        uses: pnpm/action-setup@v3
         with:
           version: 9
           run_install: false
-
-      # 然后设置 Node.js
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-
-      - name: Install dependencies
+      
+      - name: 安装依赖
+        run: pnpm install
+      
+      - name: 安装Tauri CLI
+        run: npm install -g @tauri-apps/cli
+      
+      - name: 生成Tauri签名密钥
+        id: generate-keys
         run: |
-          pnpm config set registry https://registry.npmmirror.com/
-          pnpm install
-          pnpm add openai
-
-      - name: Analyze PR
-        id: analyze
-        if: env.NO_CHANGES != 'true'
-        uses: actions/github-script@v7
-        env:
-          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          # 创建目录
+          mkdir -p ./keys
+          
+          # 生成密钥，不使用密码保护（简化流程）
+          tauri signer generate
+          
+          # 显示生成的密钥文件
+          echo "生成的密钥文件:"
+          ls -la ~/.tauri/
+          
+          # 读取私钥和公钥
+          PRIVATE_KEY=$(cat ~/.tauri/identity.key)
+          PUBLIC_KEY=$(cat ~/.tauri/identity.key.pub)
+          
+          # 将私钥和公钥保存到文件
+          echo "$PRIVATE_KEY" > ./keys/tauri_private_key.txt
+          echo "$PUBLIC_KEY" > ./keys/tauri_public_key.txt
+          
+          # 压缩密钥文件以便下载
+          cd ./keys
+          zip -r tauri-keys.zip *.txt
+          cd ..
+          
+          # 以更友好的格式输出公钥（单行）
+          echo "========== 公钥（用于配置文件） =========="
+          echo "$PUBLIC_KEY" | tr -d '\n' | tr -d '\r'
+          echo -e "\n"
+          
+          # 以更友好的格式输出私钥（用于GitHub Secrets）
+          echo "========== 私钥（用于GitHub Secrets）=========="
+          echo "$PRIVATE_KEY" | base64 | tr -d '\n'
+          echo -e "\n"
+          echo "注意：上面的私钥已经过base64编码，直接复制整行内容到GitHub Secrets中"
+      
+      - name: 上传密钥文件
+        uses: actions/upload-artifact@v4
         with:
-          script: |
-            const OpenAI = require('openai');
-
-            const openai = new OpenAI({
-              apiKey: process.env.DASHSCOPE_API_KEY,
-              baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-            });
-
-            const diff = process.env.DIFF;
-
-            try {
-              const completion = await openai.chat.completions.create({
-                model: "qwen-plus",
-                messages: [{
-                  role: "system",
-                  content: "你是一个代码审查助手。请用中文分析以下代码变更，重点关注：\n" +
-                          "1. 代码逻辑的改动\n" +
-                          "2. 潜在的问题或优化空间\n" +
-                          "3. TypeScript 类型定义的准确性\n" +
-                          "4. Vue 组件的性能影响\n" +
-                          "5. Rust 代码的安全性和性能\n" +
-                          "请用中文简明扼要地总结。"
-                }, {
-                  role: "user",
-                  content: `请分析以下代码变更并总结主要改动：\n\n${diff}`
-                }],
-                temperature: 0.7,
-                max_tokens: 1000
-              });
-
-              const analysis = completion.choices[0].message.content;
-              core.setOutput('analysis', analysis);
-
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `
-                PR 代码分析
-
-                ${analysis}
-
-                *这是由通义千问 AI 自动生成的 PR 分析，仅供参考。*`
-              });
-            } catch (error) {
-              core.setFailed(`分析失败: ${error.message}`);
-            }
-
-      - name: Skip Analysis Comment
-        if: env.NO_CHANGES == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## PR 代码分析
-
-              本次变更不包含需要分析的代码文件（src 目录下的 .vue/.ts/.tsx 文件或 src-tauri 目录下的 .rs 文件）。
-
-              ---
-              *这是自动生成的通知。*`
-            });
+          name: tauri-keys
+          path: ./keys/tauri-keys.zip
+          retention-days: 1
+      
+      - name: 帮助信息
+        run: |
+          echo "====== 如何使用这些密钥 ======"
+          echo "1. 从上面的输出中复制公钥（单行格式）"
+          echo "2. 打开 src-tauri/tauri.conf.json 文件"
+          echo "3. 找到 'plugins' > 'updater' > 'pubkey' 字段，替换为公钥内容"
+          echo "4. 在GitHub仓库设置中添加Secret:"
+          echo "   - 名称: TAURI_PRIVATE_KEY"
+          echo "   - 值: 上面显示的base64编码私钥（整行复制）"
+          echo "5. 如果您需要原始文件格式，可以下载上面的 tauri-keys 构建产物"
+          echo "当您完成这些步骤后，请移除此工作流以避免安全风险！" 
