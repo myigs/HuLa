@@ -24,7 +24,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
       
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -44,15 +43,26 @@ jobs:
           version: 9
           run_install: false
       
+      - name: Generate pnpm-lock.yaml if missing
+        run: |
+          if (!(Test-Path "pnpm-lock.yaml")) {
+            echo "未找到pnpm-lock.yaml文件，正在生成..."
+            pnpm install --no-frozen-lockfile
+          } else {
+            echo "pnpm-lock.yaml文件已存在"
+          }
+        shell: pwsh
+      
       - name: Get pnpm store directory
+        id: pnpm-cache
         shell: bash
         run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
       
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
