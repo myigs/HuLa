@@ -82,6 +82,8 @@ jobs:
           releaseBody: "请查看版本详情了解新功能。"
           releaseDraft: true
           prerelease: false
+          args: --verbose
+          signingArgs: --skip-signing
       
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
