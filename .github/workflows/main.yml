@@ -70,20 +70,30 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
+      - name: Disable auto-updater temporarily (if needed)
+        run: |
+          # 检查tauri.conf.json文件
+          $tauriConfigPath = "src-tauri/tauri.conf.json"
+          if (Test-Path $tauriConfigPath) {
+            $config = Get-Content -Raw $tauriConfigPath | ConvertFrom-Json
+            # 如果有updater配置，暂时禁用它
+            if ($config.plugins.updater) {
+              $config.plugins.updater.active = $false
+              $config | ConvertTo-Json -Depth 10 | Set-Content $tauriConfigPath
+              echo "已暂时禁用auto-updater配置"
+            } else {
+              echo "未找到updater配置或已禁用"
+            }
+          } else {
+            echo "未找到tauri.conf.json文件"
+          }
+        shell: pwsh
+      
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+        run: pnpm tauri build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-        with:
-          tagName: v__VERSION__
-          releaseName: "HuLa v__VERSION__"
-          releaseBody: "请查看版本详情了解新功能。"
-          releaseDraft: true
-          prerelease: false
-          args: --verbose
-          signingArgs: --skip-signing
+          # 这里不再需要签名相关的环境变量
       
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
