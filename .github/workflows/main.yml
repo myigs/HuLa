@@ -70,30 +70,50 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
-      - name: Disable auto-updater temporarily (if needed)
+      - name: Completely disable updater and signing
         run: |
-          # 检查tauri.conf.json文件
+          # 修改tauri.conf.json文件
           $tauriConfigPath = "src-tauri/tauri.conf.json"
           if (Test-Path $tauriConfigPath) {
-            $config = Get-Content -Raw $tauriConfigPath | ConvertFrom-Json
-            # 如果有updater配置，暂时禁用它
-            if ($config.plugins.updater) {
-              $config.plugins.updater.active = $false
-              $config | ConvertTo-Json -Depth 10 | Set-Content $tauriConfigPath
-              echo "已暂时禁用auto-updater配置"
+            echo "开始修改tauri.conf.json以禁用updater..."
+            $configJson = Get-Content -Raw $tauriConfigPath
+            $config = $configJson | ConvertFrom-Json
+            
+            # 完全移除plugins.updater部分
+            if ($config.plugins.PSObject.Properties.Name -contains "updater") {
+              $config.plugins.PSObject.Properties.Remove("updater")
+              echo "已完全移除updater配置"
             } else {
-              echo "未找到updater配置或已禁用"
+              echo "未找到updater配置"
             }
+            
+            # 将修改后的配置写回文件
+            $config | ConvertTo-Json -Depth 20 | Set-Content $tauriConfigPath
+            echo "已更新tauri.conf.json文件"
+            
+            # 显示修改后的配置
+            Get-Content $tauriConfigPath
           } else {
-            echo "未找到tauri.conf.json文件"
+            echo "错误：未找到tauri.conf.json文件"
+            exit 1
           }
         shell: pwsh
       
       - name: Build Tauri app
-        run: pnpm tauri build
+        run: |
+          # 设置环境变量忽略签名错误
+          $env:TAURI_SIGNING_PRIVATE_KEY_IGNORE = "true"
+          pnpm tauri build
+        shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # 这里不再需要签名相关的环境变量
+      
+      - name: List build artifacts
+        run: |
+          echo "列出构建产物："
+          Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Include *.msi,*.exe
+        shell: pwsh
       
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
