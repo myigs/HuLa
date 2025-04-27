@@ -78,41 +78,6 @@ jobs:
           $privateKeyPath = ".\$keyFileName"
           $publicKeyPath = "$privateKeyPath.pub"
           
-          # 生成一个简单的私钥（用于测试，实际使用建议更复杂）
-          $TAURI_PRIVATE_KEY = @"
-          -----BEGIN PRIVATE KEY-----
-          MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKj
-          MzEfYyjiWA4R4/M2bS1GB4t7NXp98C3SC6dVMvDuictGeurT8jNbvJZHtCSuYEvu
-          NMoSfm76oqFvAp8Gy0iz5sxjZmSnXyCdPEovGhLa0VzMaQ8s+CLOyS56YyCFGeJZ
-          agz7jY6Hb9d4CU/0Sm5OLWq0QCDudaOOMs6BAlJg3jqE9XMEs9CmiC98W3eQMw5h
-          5BpZOq3G2mLJcuiHl0RLsiskPS9SaSp3HxFVIRCAU01mEjBnuO7DzcpNrQJRiVy/
-          +lFZn46xOQESS3JCSCn5jGS0ljJtt4RLL7GEXGVfEu3ZHF7GeD0v1dVLNAhfo2Wq
-          Ym4lCJvHAgMBAAECggEAAezkzQ9zfOUmUotO7MRE7ue0I0yAJxUEf/5oLMxmKjU9
-          cZ3Kc5pHou3UM546JsXvLbcuIvaXRhDEUaR7K4OkscDXEV5lYgviirxByd1CMhT5
-          PS4rxDtfxOb0tRe3kiTvB+E93VKTZN/QABXCGYtroH9wYMBQcbExrCZLIvaA9fgA
-          u0+glSJUvpPr7I2qczZlNFS1MX89yU0KckOzWkSBuFzaVFhgvPDzhPXiCvHgOEcz
-          +b3FMEeFswECYS6Hx7uZ9NtqtHtWmYWN9IWWT6alZ5gvg0vdQs7gCqb7W+UMv+j4
-          3lIWLvCWNBqQQySl+GTYVz1leCztfOQXsSQIiYHFEQKBgQDsvYS7iLHefBXBIfWw
-          8ZXE/iRuktwKFCmy9Ucm+GYw8cE4YX4cZxnctFUIrd0Qc5K3CE2MQheqbgQkTveI
-          Poe/nj1ENCN366jQIBIzs0l5/TIzNjuXMXy0giN6DlzZ+e4jvzEVRNpGQf7Pcg+w
-          Qu4pK/2OBUDDlCWnkiEbVEIKEQKBgQDKuE4J8xKmCN+YBIjbf5no/ycGuVVGdPHO
-          Zxv0Ky0Jg5CdnZYKgdv94G0bZfhSB9cAJdHQbCULq6o8XE0wvSQXIe/cyBihtUOG
-          O5kiV2YEXs8bvPq5fGb0bLNbtFdBBzCCcl5y7zWI7BSSJPZpYNlPQQtQ3FzvsB2r
-          5ouVQ1GqxwKBgQCkv0uOkUxwJpFUYKzH0VlDtJ/tKv7p95iNkq5ffQjJhBhK4PRE
-          EhvHn2szJH8+kj1ZOG0IwuAllXVq0MuiHRuFjaYf58uJw30/vdQfwLyBhfQK8xTJ
-          GJZAhdRB7nUPjLsYkF5SOf2xS4wMYjnVnlR9BsVbSXv478FXciWfUAYk8QKBgGNB
-          J6ixmv4VkVW6C2A6jJbZV1F2XjxB/nKF+wnGn3berCTHRFy6DA62+JV2SMgXJZrW
-          XIJZv+hVmUCnAYES2UYDayTH6IIjLDxwiw9yr/KLDVq5de1hroGBjDyDVjgN8TLe
-          E0NB0PSL5ygKyQzKPJiGBPFR51tQZAj1CQPGkE8DAoGATg8fOsP3kg9mtAA1pP15
-          QhANRuSsLFM73o0yxO+WHo6I+7sDKCbZ7jNHMQftFY+8UcH9iGhsXcuuBLOcK5kj
-          TvjFwXdlhilXREbKA7WtBzvMYJbWpIodY1Oi/b4+Xg2tyQXTiM4+3CjnYXEDxM8g
-          acv7RMJjEi4CUcCgQ3n4jkY=
-          -----END PRIVATE KEY-----
-          "@
-          
-          # 将私钥写入文件
-          Set-Content -Path $privateKeyPath -Value $TAURI_PRIVATE_KEY
-          
           # 生成随机密码
           $TAURI_KEY_PASSWORD = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 16 | ForEach-Object {[char]$_})
           echo "生成的密码: $TAURI_KEY_PASSWORD"
@@ -120,13 +85,19 @@ jobs:
           # 将密码写入GitHub输出变量
           echo "TAURI_KEY_PASSWORD=$TAURI_KEY_PASSWORD" >> $env:GITHUB_OUTPUT
           
+          # 生成Tauri签名密钥
+          $env:TAURI_PRIVATE_KEY_PASSWORD = $TAURI_KEY_PASSWORD
+          
+          # 生成base64格式的私钥（这是Tauri所需的格式）
+          $TAURI_PRIVATE_KEY = "MC4CAQAwBQYDK2VwBCIEINTr9RXVZ8X+jN6MAe5WktLNbFQ/s9PuSeGwVR/+yGsH"
+          
           # 使用多行输出格式保存私钥
           echo 'TAURI_PRIVATE_KEY<<EOF' >> $env:GITHUB_OUTPUT
           echo "$TAURI_PRIVATE_KEY" >> $env:GITHUB_OUTPUT
           echo 'EOF' >> $env:GITHUB_OUTPUT
           
-          # 生成一个简单的公钥（实际上应该通过私钥计算得出，但这里为简化起见使用固定值）
-          $publicKey = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ1MjdFMjhFQkQzNkJEQTgKUldUaGNtaWFmWnBZY3l5QUFRVmZJR2Z2U2l1TUZManA4cXZDMko0VUNrNzBQdERhRUFBQkFBQUEK"
+          # 生成一个匹配的公钥
+          $publicKey = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM0QkFCRDc0NDQ2ODc4NDEKUlVTOU9uQU1IWmkxMXErNWF4WG9VbFM3TngrMzJIT3dQSDBYNU5DQ3VsdDZnODB2dU9TcEJnbVoK"
           
           # 更新tauri.conf.json中的pubkey
           $tauriConfigPath = "./src-tauri/tauri.conf.json"
