@@ -1,0 +1,78 @@
+name: 生成Tauri签名密钥
+
+on:
+  workflow_dispatch:  # 仅允许手动触发
+
+jobs:
+  generate-keys:
+    runs-on: ubuntu-latest  # 使用Ubuntu环境，更可靠
+    
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+      
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: 设置pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+      
+      - name: 安装依赖
+        run: pnpm install
+      
+      - name: 安装Tauri CLI
+        run: npm install -g @tauri-apps/cli
+      
+      - name: 生成Tauri签名密钥
+        id: generate-keys
+        run: |
+          # 创建目录
+          mkdir -p ./keys
+          
+          # 生成密钥，不使用密码保护（简化流程）
+          tauri signer generate
+          
+          # 显示生成的密钥文件
+          echo "生成的密钥文件:"
+          ls -la ~/.tauri/
+          
+          # 读取私钥和公钥
+          PRIVATE_KEY=$(cat ~/.tauri/identity.key)
+          PUBLIC_KEY=$(cat ~/.tauri/identity.key.pub)
+          
+          # 将公钥保存到文件
+          echo "$PUBLIC_KEY" > ./keys/tauri_public_key.txt
+          
+          # 输出私钥和公钥（将在日志中显示）
+          echo "========== 私钥（请妥善保存） =========="
+          echo "$PRIVATE_KEY"
+          echo ""
+          echo "========== 公钥 =========="
+          echo "$PUBLIC_KEY"
+          echo ""
+          
+          # 显示使用说明
+          echo "使用说明："
+          echo "1. 请将公钥添加到 src-tauri/tauri.conf.json 文件的 updater.pubkey 字段中"
+          echo "2. 请将私钥添加到 GitHub 仓库的 Secrets 中，名称为 TAURI_PRIVATE_KEY"
+      
+      - name: 上传公钥文件
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-public-key
+          path: ./keys/tauri_public_key.txt
+          retention-days: 1
+      
+      - name: 帮助信息
+        run: |
+          echo "====== 如何使用这些密钥 ======"
+          echo "1. 下载上面的 tauri-public-key 构建产物"
+          echo "2. 打开 src-tauri/tauri.conf.json 文件"
+          echo "3. 找到 'plugins' > 'updater' > 'pubkey' 字段，替换为公钥内容"
+          echo "4. 在GitHub仓库设置中添加Secret: TAURI_PRIVATE_KEY，值为上面显示的私钥"
+          echo "当您完成这些步骤后，请移除此工作流以避免安全风险！" 
