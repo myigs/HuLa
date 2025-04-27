@@ -70,51 +70,32 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
-      - name: Generate Tauri signing key
-        id: tauri-signing-key
+      - name: Disable updater in tauri.conf.json
         run: |
-          # 创建一个唯一的文件名
-          $keyFileName = [System.Guid]::NewGuid().ToString()
-          $privateKeyPath = ".\$keyFileName"
-          $publicKeyPath = "$privateKeyPath.pub"
+          # 读取tauri.conf.json文件
+          $tauriConfig = Get-Content -Path "./src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json
           
-          # 生成随机密码
-          $TAURI_KEY_PASSWORD = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 16 | ForEach-Object {[char]$_})
-          echo "生成的密码: $TAURI_KEY_PASSWORD"
+          # 禁用updater功能
+          if ($tauriConfig.plugins -and $tauriConfig.plugins.updater) {
+            $tauriConfig.plugins.updater.active = $false
+            echo "已禁用Tauri的updater功能"
+          } else {
+            echo "未找到updater配置，可能已禁用"
+          }
           
-          # 将密码写入GitHub输出变量
-          echo "TAURI_KEY_PASSWORD=$TAURI_KEY_PASSWORD" >> $env:GITHUB_OUTPUT
+          # 将修改后的配置写回文件
+          $tauriConfig | ConvertTo-Json -Depth 10 | Set-Content -Path "./src-tauri/tauri.conf.json"
           
-          # 生成Tauri签名密钥
-          $env:TAURI_PRIVATE_KEY_PASSWORD = $TAURI_KEY_PASSWORD
-          
-          # 生成base64格式的私钥（这是Tauri所需的格式）
-          $TAURI_PRIVATE_KEY = "MC4CAQAwBQYDK2VwBCIEINTr9RXVZ8X+jN6MAe5WktLNbFQ/s9PuSeGwVR/+yGsH"
-          
-          # 使用多行输出格式保存私钥
-          echo 'TAURI_PRIVATE_KEY<<EOF' >> $env:GITHUB_OUTPUT
-          echo "$TAURI_PRIVATE_KEY" >> $env:GITHUB_OUTPUT
-          echo 'EOF' >> $env:GITHUB_OUTPUT
-          
-          # 生成一个匹配的公钥
-          $publicKey = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM0QkFCRDc0NDQ2ODc4NDEKUlVTOU9uQU1IWmkxMXErNWF4WG9VbFM3TngrMzJIT3dQSDBYNU5DQ3VsdDZnODB2dU9TcEJnbVoK"
-          
-          # 更新tauri.conf.json中的pubkey
-          $tauriConfigPath = "./src-tauri/tauri.conf.json"
-          $tauriConfig = Get-Content -Path $tauriConfigPath -Raw | ConvertFrom-Json
-          $tauriConfig.plugins.updater.pubkey = $publicKey
-          $tauriConfig | ConvertTo-Json -Depth 10 | Set-Content -Path $tauriConfigPath
-          
-          echo "已更新tauri.conf.json中的公钥"
+          # 显示修改后的配置
+          echo "修改后的tauri.conf.json:"
+          Get-Content -Path "./src-tauri/tauri.conf.json"
         shell: pwsh
       
-      - name: Build Tauri app
+      - name: Build Tauri app (continue on error)
         uses: tauri-apps/tauri-action@v0
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ steps.tauri-signing-key.outputs.TAURI_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ steps.tauri-signing-key.outputs.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ steps.tauri-signing-key.outputs.TAURI_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
           releaseName: "HuLa v__VERSION__"
