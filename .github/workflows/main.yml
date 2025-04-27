@@ -83,27 +83,25 @@ jobs:
           # 生成Tauri签名密钥
           $env:TAURI_KEY_PASSWORD = $TAURI_KEY_PASSWORD
           
-          # 创建输出目录
-          mkdir -p keys
+          # 创建一个临时文件存储密钥
+          $PRIVATE_KEY_FILE = "$env:TEMP\tauri_private_key.txt"
           
-          # 运行tauri signer命令，指定输出路径
-          pnpm tauri signer generate -w "$TAURI_KEY_PASSWORD" -o "./keys"
+          # 运行tauri signer命令并记录输出
+          $output = pnpm tauri signer generate -w "$TAURI_KEY_PASSWORD" 2>&1
+          echo "Tauri signer output: $output"
           
-          # 列出生成的文件
-          ls ./keys
+          # 从输出中提取私钥文件路径
+          $privateKeyPath = $output | Select-String -Pattern "Private: (.+) \(Keep it secret\)" | ForEach-Object { $_.Matches.Groups[1].Value }
           
-          # 查找生成的私钥文件路径
-          $privateKeyFile = Get-ChildItem -Path "./keys" -Filter "*.key" | Select-Object -First 1 -ExpandProperty FullName
-          
-          if (-not $privateKeyFile) {
-            echo "错误：未能找到生成的私钥文件!"
+          if (-not $privateKeyPath -or -not (Test-Path $privateKeyPath)) {
+            echo "错误：未能找到生成的私钥文件路径: $privateKeyPath"
             exit 1
           }
           
-          echo "找到私钥文件: $privateKeyFile"
+          echo "找到私钥文件: $privateKeyPath"
           
           # 导出私钥到环境变量
-          $TAURI_PRIVATE_KEY = Get-Content -Path $privateKeyFile -Raw
+          $TAURI_PRIVATE_KEY = Get-Content -Path $privateKeyPath -Raw
           
           # 使用多行输出格式保存私钥
           echo 'TAURI_PRIVATE_KEY<<EOF' >> $env:GITHUB_OUTPUT
