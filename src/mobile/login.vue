@@ -13,7 +13,7 @@
         type="text"
         :placeholder="accountPH"
         @focus="accountPH = ''"
-        @blur="accountPH = '输入HuLa账号'"
+        @blur="accountPH = '输入synk账号'"
         clearable>
         <template #suffix>
           <n-flex v-if="loginHistories.length > 0" @click="arrowStatus = !arrowStatus">
@@ -58,7 +58,7 @@
         type="password"
         :placeholder="passwordPH"
         @focus="passwordPH = ''"
-        @blur="passwordPH = '输入HuLa密码'"
+        @blur="passwordPH = '输入synk密码'"
         clearable />
 
       <!-- 协议 -->
@@ -68,7 +68,7 @@
           <span>已阅读并同意</span>
           <span class="color-#13987f cursor-pointer">服务协议</span>
           <span>和</span>
-          <span class="color-#13987f cursor-pointer">HuLa隐私保护指引</span>
+          <span class="color-#13987f cursor-pointer">synk隐私保护指引</span>
         </div>
       </n-flex>
 
@@ -106,8 +106,8 @@ const info = ref({
   name: '',
   uid: ''
 })
-const accountPH = ref('输入HuLa账号')
-const passwordPH = ref('输入HuLa密码')
+const accountPH = ref('输入synk账号')
+const passwordPH = ref('输入synk密码')
 const protocol = ref(true)
 const loginDisabled = ref(false)
 const loading = ref(false)
