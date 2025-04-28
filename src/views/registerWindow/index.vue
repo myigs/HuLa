@@ -164,32 +164,6 @@
       <span>Copyright {{ currentYear - 1 }}-{{ currentYear }} HuLaSpark All Rights Reserved.</span>
     </n-flex>
 
-    <!-- 星标提示框 -->
-   <!-- <n-modal v-model:show="starTipsModal" :mask-closable="false" class="rounded-8px" transform-origin="center">
-      <div class="bg-[--bg-edit] w-380px h-fit box-border flex flex-col">
-        <n-flex vertical class="w-full h-fit">
-          <video class="w-full h-240px rounded-t-8px object-cover" src="@/assets/video/star.mp4" autoplay loop />
-          <n-flex vertical :size="10" class="p-14px">
-            <p class="text-(16px [--text-color] font-bold)">在 GitHub 为我们点亮星标</p>
-            <p class="text-(12px [--chat-text-color]) leading-5">
-              如果您喜爱我们的产品，并希望支持我们，可以去 GitHub
-              给我们点一颗星吗？这个小小的动作对我们来说意义重大，能激励我们为您持续提供特性体验。
-            </p>
-
-            <n-flex :size="10" class="ml-auto">
-              <a
-                target="_blank"
-                rel="noopener noreferrer"
-                @click="handleStar"
-                href="https://github.com/HuLaSpark/HuLa"
-                class="bg-#363636 cursor-pointer w-70px h-30px rounded-8px flex-center text-(12px #f1f1f1) outline-none no-underline">
-                点亮星标
-              </a>
-            </n-flex>
-          </n-flex>
-        </n-flex>
-      </div>
-    </n-modal>-->
 
     <!-- 邮箱验证码输入弹窗 -->
     <n-modal v-model:show="emailCodeModal" :mask-closable="false" class="rounded-8px" transform-origin="center">
@@ -494,10 +468,7 @@ const register = async () => {
   }
 }
 
-const handleStar = () => {
-  starTipsModal.value = false
-  localStorage.setItem('star', '1')
-}
+
 
 onMounted(async () => {
   await getCurrentWebviewWindow().show()
