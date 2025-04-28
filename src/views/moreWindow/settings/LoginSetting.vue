@@ -3,14 +3,14 @@
   <n-flex vertical :size="20" data-tauri-drag-region>
     <n-flex :size="12" vertical class="item-box">
       <n-flex align="center" justify="space-between">
-        <span>启动HuLa程序后自动登录账号</span>
+        <span>启动synk程序后自动登录账号</span>
         <n-switch size="small" v-model:value="autoLogin" />
       </n-flex>
 
       <div class="bg-[--line-color] h-1px w-full"></div>
 
       <n-flex align="center" justify="space-between">
-        <span>电脑开机后自动启动HuLa程序</span>
+        <span>电脑开机后自动启动synk程序</span>
         <n-switch size="small" v-model:value="autoStartup" @change="handleStartUp" />
       </n-flex>
     </n-flex>
