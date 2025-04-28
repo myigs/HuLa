@@ -93,7 +93,7 @@
                 <span>已阅读并同意</span>
                 <span class="color-#13987f cursor-pointer">服务协议</span>
                 <span>和</span>
-                <span class="color-#13987f cursor-pointer">HuLa隐私保护指引</span>
+                <span class="color-#13987f cursor-pointer">synk隐私保护指引</span>
               </div>
             </n-flex>
           </div>
@@ -165,7 +165,7 @@
     </n-flex>
 
     <!-- 星标提示框 -->
-    <n-modal v-model:show="starTipsModal" :mask-closable="false" class="rounded-8px" transform-origin="center">
+   <!-- <n-modal v-model:show="starTipsModal" :mask-closable="false" class="rounded-8px" transform-origin="center">
       <div class="bg-[--bg-edit] w-380px h-fit box-border flex flex-col">
         <n-flex vertical class="w-full h-fit">
           <video class="w-full h-240px rounded-t-8px object-cover" src="@/assets/video/star.mp4" autoplay loop />
@@ -189,7 +189,7 @@
           </n-flex>
         </n-flex>
       </div>
-    </n-modal>
+    </n-modal>-->
 
     <!-- 邮箱验证码输入弹窗 -->
     <n-modal v-model:show="emailCodeModal" :mask-closable="false" class="rounded-8px" transform-origin="center">
@@ -259,9 +259,9 @@ const registerLoading = ref(false)
 
 // 占位符
 const placeholders: Record<InputType, string> = {
-  name: '输入HuLa昵称',
+  name: '输入synk昵称',
   email: '输入邮箱',
-  password: '输入HuLa密码',
+  password: '输入synk密码',
   code: '验证码',
   confirmPassword: '输入二次密码'
 } as const
