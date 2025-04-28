@@ -24,7 +24,7 @@
           type="text"
           :placeholder="accountPH"
           @focus="accountPH = ''"
-          @blur="accountPH = '邮箱/HuLa账号'"
+          @blur="accountPH = '邮箱/synk账号'"
           clearable>
           <template #suffix>
             <n-flex v-if="loginHistories.length > 0" @click="arrowStatus = !arrowStatus">
@@ -69,7 +69,7 @@
           type="password"
           :placeholder="passwordPH"
           @focus="passwordPH = ''"
-          @blur="passwordPH = '输入HuLa密码'"
+          @blur="passwordPH = '输入synk密码'"
           clearable />
 
         <!-- 协议 -->
@@ -79,7 +79,7 @@
             <span>已阅读并同意</span>
             <span class="color-#13987f cursor-pointer">服务协议</span>
             <span>和</span>
-            <span class="color-#13987f cursor-pointer">HuLa隐私保护指引</span>
+            <span class="color-#13987f cursor-pointer">synk隐私保护指引</span>
           </div>
         </n-flex>
 
@@ -210,8 +210,8 @@ const arrowStatus = ref(false)
 const moreShow = ref(false)
 const isAutoLogin = ref(login.value.autoLogin && TOKEN.value && REFRESH_TOKEN.value)
 const { setLoginState } = useLogin()
-const accountPH = ref('邮箱/HuLa账号')
-const passwordPH = ref('输入HuLa密码')
+const accountPH = ref('邮箱/synk账号')
+const passwordPH = ref('输入synk密码')
 /** 登录按钮的文本内容 */
 const loginText = ref(isOnline.value ? (isAutoLogin.value ? '登录' : '登录') : '网络异常')
 /** 是否直接跳转 */
